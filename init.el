@@ -199,9 +199,16 @@
 
 (use-package rg)
 
-(use-package magit)
-;;:custom
-;;(magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+(setenv "GIT_ASKPASS" "git-gui--askpass")
+
+(use-package magit
+  :custom
+  (magit-display-buffer-function #'magit-display-buffer-same-window-except-diff-v1))
+
+(use-package forge
+  :after magit)
+
+(use-package ssh-agency)
 
 ; =================== Theme
 
