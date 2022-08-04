@@ -9,4 +9,4 @@ server
 transient
 *~
 *.sqlite
-#*#
+\#*\#
