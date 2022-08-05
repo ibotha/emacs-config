@@ -10,3 +10,6 @@ transient
 *~
 *.sqlite
 \#*\#
+/.cache/
+/.log/
+/.lsp-session-v1

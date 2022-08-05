@@ -12,6 +12,7 @@
 (global-display-line-numbers-mode 1)
 (dolist (mode '(org-mode-hook
                 term-mode-hook
+                treemacs-mode-hook
                 eshell-mode-hook
                 shell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
@@ -48,14 +49,69 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
+(use-package treemacs
+  :ensure t
+  :defer t
+  :init
+  (with-eval-after-load 'winum
+    (define-key winum-keymap (kbd "M-0") #'treemacs-select-window))
+  :config
+  (progn
+
+    ;; The default width and height of the icons is 22 pixels. If you are
+    ;; using a Hi-DPI display, uncomment this to double the icon size.
+    ;;(treemacs-resize-icons 44)
+
+    ( treemacs-follow-mode t)
+    (treemacs-filewatch-mode t)
+    (treemacs-fringe-indicator-mode 'always)
+    ;; (when treemacs-python-executable
+    ;;   (treemacs-git-commit-diff-mode t))
+
+    ;; (pcase (cons (not (null (executable-find "git")))
+    ;;              (not (null treemacs-python-executable)))
+    ;;   (`(t . t)
+    ;;    (treemacs-git-mode 'deferred))
+    ;;   (`(t . _)
+    ;;    (treemacs-git-mode 'simple)))
+
+    (treemacs-hide-gitignored-files-mode nil))
+  :bind
+  (:map global-map
+        ("M-0"       . treemacs-select-window)
+        ("C-x t 1"   . treemacs-delete-other-windows)
+        ("C-x t t"   . treemacs)
+        ("C-x t d"   . treemacs-select-directory)
+        ("C-x t B"   . treemacs-bookmark)
+        ("C-x t C-t" . treemacs-find-file)
+        ("C-x t M-t" . treemacs-find-tag)))
+
+(use-package treemacs-evil
+  :after (treemacs evil)
+  :ensure t)
+
+(use-package treemacs-projectile
+  :after (treemacs projectile)
+  :ensure t)
+
+(use-package treemacs-icons-dired
+  :hook (dired-mode . treemacs-icons-dired-enable-once)
+  :ensure t)
+
+(use-package treemacs-magit
+  :after (treemacs magit)
+  :ensure t)
+
 (use-package doom-themes
   :config
   (setq doom-themes-enable-bold t
         doom-themes-enable-italic t)
-  (load-theme 'doom-vibrant t)
-
+  (load-theme 'doom-monokai-octagon t)
+  (setq doom-themes-treemacs-theme "doom-colors")
+  (doom-themes-treemacs-config)
   (doom-themes-visual-bell-config)
   (doom-themes-org-config))
+
 (use-package doom-modeline
   :init (doom-modeline-mode 1)
   :custom ((doom-modeline-height 40)))
@@ -74,18 +130,18 @@
   :if (display-graphic-p)
   :hook (dired-mode . all-the-icons-dired-mode))
 
-(set-face-attribute 'default nil :font "Fira Code" :height 130)
+(set-face-attribute 'default nil :font "Fira Code" :height 120)
 
 ;; Set the fixed pitch face
-(set-face-attribute 'fixed-pitch nil :font "Fira Code" :height 130)
+(set-face-attribute 'fixed-pitch nil :font "Fira Code" :height 120)
 
 ;; Set the variable pitch face
-(set-face-attribute 'variable-pitch nil :font "Cantarell" :height 130 :weight 'regular)
+(set-face-attribute 'variable-pitch nil :font "Cantarell" :height 120 :weight 'regular)
 
 ;;(doom-themes-neotree-config)
 
-;;(setq doom-themes-treemacs-theme "doom-colors")
-;;(doom-themes-treemacs-config)
+;;
+;;
 
 (use-package which-key
   :init (which-key-mode)
@@ -102,24 +158,6 @@
   ([remap describe-command] . helpful-command)
   ([remap describe-variable] . counsel-describe-variable)
   ([remap describe-key] . helpful-key))
-
-(use-package projectile
-  :diminish projectile-mode
-  :bind-keymap
-  ("C-c p" . projectile-command-map)
-  :custom ((projectile-completion-system 'ivy))
-  :init
-  (when (file-directory-p "~/Projects/Code")
-    (setq projectile-project-search-path '("~/Projects/Code")))
-  (setq projectile-swotch-project-action #'projectile-dired)
-  (projectile-mode 1))
-
-(use-package counsel-projectile
-  :init (counsel-projectile-mode))
-
-(use-package ripgrep)
-
-(use-package rg)
 
 (defun isard/org-mode-setup ()
   (org-indent-mode)
@@ -181,6 +219,14 @@
   (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
   (add-to-list 'org-structure-template-alist '("py" . "src python"))
   (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+
+(defun isard/org-babel-tangle-config ()
+  (when (string-equal (buffer-file-name)
+                      (expand-file-name "~/.emacs.d/Readme.org"))
+    (let ((org-confirm-babel-evaluate nil))
+      (org-babel-tangle))))
+
+(add-hook 'org-mode-hook (lambda () (add-hook 'after-save-hook #'isard/org-babel-tangle-config)))
 
 (use-package counsel
   :bind (("M-x" . counsel-M-x)
@@ -260,18 +306,114 @@
 
 (use-package ssh-agency)
 
+(use-package typescript-mode
+  :mode "\\.ts\\'"
+  :hook (typescript-mode . lsp-deferred)
+  :config
+  (setq typescript-indent-level 2))
+
+(use-package graphql-mode
+  :mode "\\.graphql\\'"
+  :hook (graphql-mode . lsp-deferred)
+  )
+
+(use-package evil-nerd-commenter
+  :bind ("M-/" . evilnc-comment-or-uncomment-lines))
+
+(use-package lsp-mode
+  :commands (lsp lsp-deffered)
+  :init (setq lsp-keymap-prefix "C-c l")
+  :config
+  (lsp-enable-which-key-integration t))
+
+(use-package lsp-ui
+  :hook (lsp-mode . lsp-ui-mode)
+  :custom
+  (lsp-ui-doc-position 'bottom))
+
+(use-package lsp-treemacs
+  :after lsp)
+
+(use-package lsp-ivy)
+
+(use-package company
+  :after lsp-mode
+  :hook (lsp-mode . company-mode)
+  :bind (:map company-active-map
+         ("<tab>" . company-complete-selection))
+        (:map lsp-mode-map
+         ("<tab>" . company-indent-or-complete-common))
+  :custom
+  (company-minimum-prefix-length 1)
+  (company-idle-delay 0.0))
+
+(use-package company-box
+  :hook (company-mode . company-box-mode))
+
+(use-package projectile
+  :diminish projectile-mode
+  :bind-keymap
+  ("C-c p" . projectile-command-map)
+  :custom ((projectile-completion-system 'ivy))
+  :config
+  (require 'ansi-color)
+  (defun colorize-compilation-buffer ()
+    (toggle-read-only)
+    (ansi-color-apply-on-region compilation-filter-start (point))
+    (toggle-read-only))
+  (add-hook 'compilation-filter-hook 'colorize-compilation-buffer)
+  :init
+  (when (file-directory-p "~/Projects/Code")
+    (setq projectile-project-search-path '(("~/Projects/Code" . 2))))
+  (setq projectile-switch-project-action #'projectile-dired)
+  (projectile-mode 1))
+
+
+(projectile-register-project-type 'isard-npm '("package.json" "src" "test")
+                                  :project-file "package.json"
+                                  :compile "npm run build"
+                                  :test "npm run test"
+                                  :run "npm run dev"
+                                  :test-dir "test"
+                                  :src-dir "src"
+                                  :test-suffix "-test")
+
+(use-package counsel-projectile
+  :init (counsel-projectile-mode))
+
+(use-package ripgrep)
+
+(use-package rg)
+
 (use-package general
   :config
-  (general-evil-setup t)
+  (progn
+    (general-create-definer isard/leader-keys
+      :keymaps '(normal insert visual emacs)
+      :prefix "SPC"
+      :global-prefix "C-SPC")
 
-  (general-create-definer isard/leader-keys
-                          :keymaps '(normal insert visual emacs)
-                          :prefix "SPC"
-                          :global-prefix "C-SPC"))
+    (setq general-override-states '(insert emacs hybrid normal visual motion operator replace))
+    (general-override-mode)
+    (general-evil-setup)
+    )
+  )
 
+(general-nmap "SPC l" (general-simulate-key "C-c l" :which-key "lsp"))
+(general-nmap "SPC g" (general-simulate-key "C-x g" :which-key "git"))
 (isard/leader-keys
- "t" '(:ignore t :which-key "toggles")
- "ts" '(hydra-text-scale/body :which-key "scale"))
+  "t" '(:ignore t :which-key "toggles")
+  "ts" '(hydra-text-scale/body :which-key "scale")
+  "f" '(:ignore t :which-key "file")
+  "fs" '(save-buffer :which-key "save")
+  "s" '(:ignore t :which-key "search")
+  "p" '(projectile-command-map :which-key "project")
+  "l" '(lsp-command-map :which-key "lsp")
+  "sb" '(swiper :which-key "buffer")
+  "sf" '(counsel-find-file :which-key "file"l)
+  "x" '(save-buffers-kill-terminal :which-key "exit")
+  "e" '(treemacs  :which-key "tree")
+  )
 
 (use-package hydra)
 
