@@ -13,6 +13,7 @@
 (dolist (mode '(org-mode-hook
                 term-mode-hook
                 treemacs-mode-hook
+                compilation-mode-hook
                 eshell-mode-hook
                 shell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
@@ -27,7 +28,6 @@
 ;; Keep random variables out of my config
 (setq custom-file (locate-user-emacs-file "custom-vars.el"))
 (load custom-file 'noerror' 'nomessage)
-
 ;; Auto-update files
 (global-auto-revert-mode 1)
 
@@ -48,6 +48,10 @@
 
 (require 'use-package)
 (setq use-package-always-ensure t)
+
+(use-package undo-tree
+  :init (global-undo-tree-mode)
+  )
 
 (use-package treemacs
   :ensure t
@@ -278,6 +282,7 @@
   (setq evil-want-integration t
         evil-want-keybinding nil
         evil-want-C-u-scroll t
+        evil-undo-system 'undo-tree
         evil-want-C-i-jump nil)
   (evil-mode 1)
   :hook (evil-mode . isard/evil-hook)
@@ -315,6 +320,11 @@
 (use-package graphql-mode
   :mode "\\.graphql\\'"
   :hook (graphql-mode . lsp-deferred)
+  )
+
+(use-package elm-mode
+  :mode "\\.graphql\\'"
+  :hook (elm-mode . lsp-deferred)
   )
 
 (use-package evil-nerd-commenter
@@ -394,13 +404,11 @@
       :global-prefix "C-SPC")
 
     (setq general-override-states '(insert emacs hybrid normal visual motion operator replace))
-    (general-override-mode)
     (general-evil-setup)
     )
   )
 
 (general-nmap "SPC l" (general-simulate-key "C-c l" :which-key "lsp"))
-(general-nmap "SPC g" (general-simulate-key "C-x g" :which-key "git"))
 (isard/leader-keys
   "t" '(:ignore t :which-key "toggles")
   "ts" '(hydra-text-scale/body :which-key "scale")
@@ -408,9 +416,10 @@
   "fs" '(save-buffer :which-key "save")
   "s" '(:ignore t :which-key "search")
   "p" '(projectile-command-map :which-key "project")
-  "l" '(lsp-command-map :which-key "lsp")
+  "g" '(magit-status :which-key "git")
+  "u" '(undo-tree-visualize :which-key "undo tree")
   "sb" '(swiper :which-key "buffer")
-  "sf" '(counsel-find-file :which-key "file"l)
+  "sf" '(counsel-find-file :which-key "file")
   "x" '(save-buffers-kill-terminal :which-key "exit")
   "e" '(treemacs  :which-key "tree")
   )
